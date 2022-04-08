@@ -1,4 +1,4 @@
-from smbus2 import SMBus
+from smbus2 import SMBus, i2c_msg
 
 class ADC_LTC2499:
     '''Data Out:
@@ -40,12 +40,17 @@ class ADC_LTC2499:
         config_data.append( (self.EN2 << 7) | (self.IM << 6) | (self.FA << 5) | (self.FB << 4) | (self.SPD << 3))
         for byte in config_data:
             print("{:b}".format(byte))
-        self.i2c.write_block_data(self.i2c_address, 0, config_data)
+        #self.i2c.write_i2c_block_data(self.i2c_address, 0, config_data)
+        msg = i2c_msg.write(self.i2c_address, config_data)
+        i2c.i2c_rdwr(msg)
 
     def read(self):
+        self.temp_data = []
         for channel_num in range(0,16):
             self.setChannel(channel_num)
-            Data = self.i2c.read_block_data(self.i2c_address, 0, 4)
+            rawData= i2c_msg.read(self.i2c_address, 4)
+            i2c.i2c_rdwr(rawData)
+            print(rawData)
 
     def setChannel(self, channel):
         self.EN = 0b0 #save previous configuration
@@ -53,10 +58,12 @@ class ADC_LTC2499:
         self.Channel = bin(channel)
 
         config_data = [(0b10 << 6) | (self.EN << 5) | (self.SGL << 4) | self.Channel]
-        self.i2c.write_byte_data(self.i2c_address, config_data)
+        msg = i2c_msg.write(self.i2c_address, config_data)
+        i2c.i2c_rdwr(msg)
 
 if __name__ == '__main__':
     i2c = SMBus(0)
 
     adc = ADC_LTC2499(i2c)
     adc.init()
+    adc.read()
