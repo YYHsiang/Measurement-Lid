@@ -5,7 +5,7 @@ from datetime import datetime
 
 #TODO clamp detection
 
-class ADC_LTC2499:
+class LTC2499:
     '''Data Out:
         Byte #1                                     Byte #2
         START  SA6 SA5 SA4 SA3 SA2 SA1 SA0 R SACK   SGN MSB D23 D22 D21 D20 D19 D18 MACK
@@ -60,32 +60,29 @@ class ADC_LTC2499:
 
     def get_temperature(self):
         return self.temp_data
+    
+    # Clear Temperature Data
+    def clear_temperature(self): 
+        self.temp_data = []
 
     def read(self):
-        print(str(datetime.now().time()) + " --> " + "read")
-        
-        self.temp_data = []
-        for channel_num in range(0,16):
-            time.sleep(0.17)
-            self.setChannel(channel_num)# set channel
-            time.sleep(0.17)
-            
-            # read data
-            rawData= i2c_msg.read(self.i2c_address, 4)
-            self.i2c.i2c_rdwr(rawData)
+        # read data
+        rawData= i2c_msg.read(self.i2c_address, 4)
+        self.i2c.i2c_rdwr(rawData)
 
-            # convert data into temperature
-            full, temp_bin, clamp = self.List2Bin(list(rawData))
-            temp_bin = self.Bin2Vol(temp_bin)
+        # convert data into temperature
+        full, temp_bin, clamp = self.List2Bin(list(rawData))
+        temp_bin = self.Bin2Vol(temp_bin)
+        if(temp_bin <= 0):
+            temp_c = None
+        else:
             temp_c = self.Vol2Temp(temp_bin)
-            #print(str(datetime.now().time()) + " --> " + "rawData: " + str(temp_bin) + "  TEMP: "+ str(temp_c)+"\n")
-
-            # store data
-            self.temp_data[channel_num] = temp_c
-
+        
+        # store data
+        self.temp_data.append(temp_c)
 
     def setChannel(self, channel):
-        #print(str(datetime.now().time()) + " --> " + "setChannel: " + str(channel))
+        print(str(datetime.now().time()) + " --> " + "setChannel: " + str(channel))
         
         self.EN = 0b1
         self.SGL = 0b1
@@ -133,7 +130,7 @@ class ADC_LTC2499:
         return voltage
 
     def Vol2Temp(self, voltage):
-        NTC_Res = (self.V_ref - voltage) / (voltage / self.RES_10K)
+        NTC_Res = ( voltage) / ((self.V_ref - voltage) / self.RES_10K)
         K_Temp = 1 / ( (1 / self.ROOM_TEMP) - (math.log(self.RES_NTC_ROOM_TEMP / NTC_Res)) / self.B_CONSTANT)
         C_Temp = K_Temp - 273.15
 
